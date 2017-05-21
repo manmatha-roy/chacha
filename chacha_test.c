@@ -61,40 +61,44 @@ void print_chacha_matrix(uint32_t words[16], char name[100])
 	printf("\n\n");
 }
 
-uint32_t calc_bit_diff(uint32_t a[16], uint32_t b[16], uint32_t bitset[512])
+uint32_t calc_bit_diff(uint32_t a[16], uint32_t b[16], uint32_t* bitset)
 {
 
-	uint8_t count;
-	uint32_t xor,const_diff_count,iv_diff_count,key_diff_count,word_diff_count;
+	uint32_t count;
+	uint32_t xor,const_diff_count,iv_diff_count,key_diff_count,
+				word_diff_count;
 	const_diff_count=iv_diff_count=key_diff_count=0;
 
 	uint32_t bitpos=0;
 	uint32_t tmp=0;
-	
+
+	//for(count=256;count<384;count++)
+	//	printf("%u %u \n", count+1, 
+	//			bitset[count]);
+
 	for(count=0;count<4;count++)
 	{
 		
+		word_diff_count=xor=0;
 		xor=XOR(a[count], b[count]);
 		while(xor)
 	  	{
-	    		bitset[bitpos] += ~(xor & 1);
+	    		bitset[bitpos] += (xor & 1);
 			bitpos++;
 			word_diff_count += xor & 1;
 	    		xor >>= 1;
 	  	}
 		bitpos =(32*(count+1));
 		const_diff_count += word_diff_count;
-				
 	}
 	for(count=4;count<12;count++)
 	{
 		
 		word_diff_count=xor=0;
-		
 		xor=XOR(a[count], b[count]);
 		while(xor)
 	  	{
-	    		bitset[bitpos] += ~(xor & 1);
+	    		bitset[bitpos] += (xor & 1);
 			bitpos++;
 			word_diff_count += xor & 1;
 	    		xor >>= 1;
@@ -110,7 +114,7 @@ uint32_t calc_bit_diff(uint32_t a[16], uint32_t b[16], uint32_t bitset[512])
 		xor=XOR(a[count], b[count]);
 		while(xor)
 	  	{
-	    		bitset[bitpos] += ~(xor & 1);
+	    		bitset[bitpos] += (xor & 1);
 			bitpos++;
 			word_diff_count += xor & 1;
 	    		xor >>= 1;
@@ -118,15 +122,24 @@ uint32_t calc_bit_diff(uint32_t a[16], uint32_t b[16], uint32_t bitset[512])
 		bitpos =(32*(count+1));
 		iv_diff_count += word_diff_count;		
 	}
-	printf("\tNo Toggle Bits: Const %d Key %d IV %d Total %d \n", const_diff_count,
-				key_diff_count,iv_diff_count, (const_diff_count+iv_diff_count+key_diff_count));
+
+
+	//for(count=256;count<384;count++)
+	//	printf("%u %u \n", count+1, 
+	//			bitset[count]);
+
+	//printf("\tNo Toggle Bits: Const %d Key %d IV %d Total %d \n", 
+	//		const_diff_count,key_diff_count,iv_diff_count, 
+	//		(const_diff_count+iv_diff_count+key_diff_count));
+	
 	return (const_diff_count+iv_diff_count+key_diff_count);
 }
 
 
 void main()
 {
-	uint32_t input[16], output[16], test_input[16], test_output[16], last_test_output[16];
+	uint32_t input[16], output[16], test_input[16], test_output[16], 
+				last_test_output[16];
 	uint32_t test_count;
 	uint32_t bit_diff_count;
 	uint32_t bitflip[512];
@@ -175,12 +188,13 @@ void main()
 		{
 			bitflip[test_count]=0;
 		}
+		
 		for(test_count=0;test_count<10000;test_count++)
 		{	
 			
 		
 	
-			if(test_count)
+			if(test_count > 0)
 			{	
 				test_input[4]=test_output[4];
 				test_input[5]=test_output[5];
@@ -206,7 +220,6 @@ void main()
 
 			chacha_standard_routine(test_input,test_output);
 			calc_bit_diff(output, test_output, bitflip);
-					
 		}
 
 
@@ -220,7 +233,7 @@ void main()
 		for(test_count=128;test_count<385;test_count++)
 		{
 
-			if((tmp=abs(bitflip[test_count]-5000)) > 3)
+			if((tmp=(bitflip[test_count]>5000?(bitflip[test_count]-5000):(5000-bitflip[test_count]))) > 100)
 			{
 				similar++;
 			}
@@ -240,8 +253,9 @@ void main()
 		printf("Similarity %u\n", similar);
 
 	}
-	for(test_count=128;test_count<384;test_count++)
-		fprintf(fp, "%u %u \n", test_count+1, abs(bitflip[test_count]-5000));
+	for(test_count=0;test_count<400;test_count++)
+		fprintf(fp, "%u %u \n", test_count+1, 
+				(bitflip[test_count]>5000?(bitflip[test_count]-5000):(5000-bitflip[test_count])));
 		
 }
 
